@@ -1,123 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GenFarm AI - Voice Assistant</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GenFarm AI</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <style>
-    * {
-      box-sizing: border-box;
-      font-family: 'Roboto', sans-serif;
-    }
     body {
-      margin: 0;
-      background: linear-gradient(to right, #5ee7df, #b490ca);
+      background: linear-gradient(to right, #74ebd5, #acb6e5);
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
-      align-items: center;
       justify-content: center;
-      min-height: 100vh;
-      color: #333;
-      padding: 1rem;
+      align-items: center;
+      font-family: 'Segoe UI', sans-serif;
     }
-    h1 {
-      font-size: 2.5rem;
-      margin-bottom: 1rem;
-      text-align: center;
-    }
-    .card {
+
+    .container {
       background: white;
-      border-radius: 20px;
       padding: 2rem;
-      width: 100%;
-      max-width: 550px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-      text-align: center;
+      border-radius: 15px;
+      box-shadow: 0px 4px 30px rgba(0, 0, 0, 0.1);
+      width: 90%;
+      max-width: 600px;
     }
-    .card input[type="file"] {
-      margin-top: 1rem;
-    }
-    .button, .voice-button {
-      margin-top: 1.2rem;
-      padding: 0.8rem 2rem;
-      background: #6a11cb;
-      color: white;
-      border: none;
+
+    .result {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background-color: #f1f1f1;
       border-radius: 10px;
-      cursor: pointer;
-      font-size: 1rem;
-      transition: background 0.3s ease;
-    }
-    .button:hover, .voice-button:hover {
-      background: #2575fc;
-    }
-    #response, #transcript {
-      margin-top: 1rem;
-      font-weight: bold;
-    }
-    .mic-icon {
-      font-size: 2rem;
     }
   </style>
 </head>
-<body>
-  <h1>GenFarm AI</h1>
-  <div class="card">
-    <p>Upload a crop image to detect disease:</p>
-    <input type="file" id="imageInput" accept="image/*" />
-    <button class="button" onclick="simulateDetection()">Analyze</button>
 
-    <p style="margin-top:2rem;">Ask your farming question (Voice):</p>
-    <button class="voice-button" onclick="startVoiceRecognition()">
-      🎤 Tap to Speak
-    </button>
-    <div id="transcript"></div>
-    <div id="response"></div>
+<body>
+  <div class="container text-center">
+    <h1 class="mb-4">🌾 GenFarm AI 🌿</h1>
+    <p class="text-muted">Upload a crop image or ask your query by voice</p>
+    <input type="file" id="imageInput" class="form-control mb-3">
+    <button onclick="analyzeImage()" class="btn btn-success w-100">Analyze Image</button>
+
+    <div class="mt-4">
+      <button onclick="startListening()" class="btn btn-outline-primary">🎤 Speak your query</button>
+      <p id="voiceOutput" class="mt-2"></p>
+    </div>
+
+    <div id="result" class="result mt-4" style="display:none;"></div>
   </div>
 
   <script>
-    function simulateDetection() {
-      const response = document.getElementById("response");
-      response.innerText = "Analyzing...";
-      setTimeout(() => {
-        response.innerText = "Possible Disease: Leaf Blight. Suggested Action: Use organic fungicide and remove affected leaves.";
-      }, 2000);
+    const backendUrl = "https://genfarm-backend.onrender.com/analyze";
+
+    async function analyzeImage() {
+      const fileInput = document.getElementById('imageInput');
+      const resultDiv = document.getElementById('result');
+      resultDiv.style.display = 'none';
+
+      if (!fileInput.files[0]) {
+        alert("Please upload an image.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('image', fileInput.files[0]);
+
+      try {
+        const res = await fetch(backendUrl, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `<strong>Disease:</strong> ${data.disease}<br><strong>Suggestion:</strong> ${data.suggestion}`;
+      } catch (err) {
+        alert("Error analyzing image. Try again later.");
+        console.error(err);
+      }
     }
 
-    function startVoiceRecognition() {
-      const transcriptDiv = document.getElementById("transcript");
-      const responseDiv = document.getElementById("response");
-      transcriptDiv.innerText = "Listening...";
-      responseDiv.innerText = "";
-
+    function startListening() {
+      const output = document.getElementById("voiceOutput");
       const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-      recognition.lang = 'en-IN';
+      recognition.lang = 'en-US';
       recognition.start();
 
-      recognition.onresult = function(event) {
-        const speechText = event.results[0][0].transcript;
-        transcriptDiv.innerText = `You said: "${speechText}"`;
-        // Simple keyword-based AI response
-        let reply = "Let me think...";
-        if (speechText.includes("fertilizer")) {
-          reply = "Use a balanced NPK fertilizer for your crops at early stages.";
-        } else if (speechText.includes("watering") || speechText.includes("irrigation")) {
-          reply = "Irrigate in the early morning or late evening to reduce water loss.";
-        } else if (speechText.includes("pesticide")) {
-          reply = "Use neem oil or organic pesticide to control common pests.";
-        } else if (speechText.includes("plant")) {
-          reply = "Try short-duration paddy variety like MTU 1010 for the current season.";
-        } else {
-          reply = "Sorry, I am still learning. Try asking about fertilizer or irrigation!";
-        }
-        responseDiv.innerText = reply;
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        output.innerText = `You said: "${transcript}"\n(Voice queries are for future updates)`;
       };
 
-      recognition.onerror = function(event) {
-        transcriptDiv.innerText = "Error occurred in recognition: " + event.error;
-      };
+      recognition.onerror = (err) => {
+        output.innerText = "Voice input failed. Please try again.";
+      }
     }
   </script>
 </body>
+
 </html>
